@@ -1,12 +1,27 @@
 # Compiled Object files
-*.slo
-*.lo
+*.[oa]
+*~
 *.o
-
-# Compiled Dynamic libraries
-*.so
-
-# Compiled Static libraries
-*.lai
-*.la
+*.o.*
 *.a
+*.s
+*.ko
+*.so
+*.so.dbg
+*.mod.c
+*.i
+*.lst
+*.raw
+*.symtypes
+*.order
+*.elf
+*.bin
+*.gz
+*.bz2
+*.lzma
+*.lzo
+*.S
+.tmp_*
+*.gcno
+*.map
+
