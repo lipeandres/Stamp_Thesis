@@ -598,9 +598,7 @@ static void ads7846_rx(void *ads)
 		if (!ts->pendown) {
 			input_report_key(input, BTN_TOUCH, 1);
 			ts->pendown = 1;
-#ifdef VERBOSE
-			dev_dbg(&ts->spi->dev, "DOWN\n");
-#endif
+			dev_vdbg(&ts->spi->dev, "DOWN\n");
 		}
 
 		if (ts->swap_xy)
@@ -608,13 +606,10 @@ static void ads7846_rx(void *ads)
 
 		input_report_abs(input, ABS_X, x);
 		input_report_abs(input, ABS_Y, y);
-		input_report_abs(input, ABS_PRESSURE, Rt);
+		input_report_abs(input, ABS_PRESSURE, ts->pressure_max - Rt);
 
 		input_sync(input);
-
-		dev_dbg(&ts->spi->dev, "%4d/%4d/%4d\n", x, y, Rt);
-		printk("ads7843 x: %4d y: %4d \n", x, y);
-
+		dev_vdbg(&ts->spi->dev, "%4d/%4d/%4d\n", x, y, Rt);
 	}
 
 	hrtimer_start(&ts->timer, ktime_set(0, TS_POLL_PERIOD),
@@ -724,9 +719,7 @@ static enum hrtimer_restart ads7846_timer(struct hrtimer *handle)
 			input_sync(input);
 
 			ts->pendown = 0;
-#ifdef VERBOSE
-			dev_dbg(&ts->spi->dev, "UP\n");
-#endif
+			dev_vdbg(&ts->spi->dev, "UP\n");
 		}
 
 		/* measurement cycle ended */
@@ -825,6 +818,9 @@ static int ads7846_suspend(struct spi_device *spi, pm_message_t message)
 
 	spin_unlock_irq(&ts->lock);
 
+	if (device_may_wakeup(&ts->spi->dev))
+		enable_irq_wake(ts->spi->irq);
+
 	return 0;
 
 }
@@ -832,6 +828,9 @@ static int ads7846_suspend(struct spi_device *spi, pm_message_t message)
 static int ads7846_resume(struct spi_device *spi)
 {
 	struct ads7846 *ts = dev_get_drvdata(&spi->dev);
+
+	if (device_may_wakeup(&ts->spi->dev))
+		disable_irq_wake(ts->spi->irq);
 
 	spin_lock_irq(&ts->lock);
 
@@ -987,6 +986,15 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 			pdata->pressure_min, pdata->pressure_max, 0, 0);
 
 	vref = pdata->keep_vref_on;
+
+	if (ts->model == 7873) {
+		/* The AD7873 is almost identical to the ADS7846
+		 * keep VREF off during differential/ratiometric
+		 * conversion modes
+		 */
+		ts->model = 7846;
+		vref = 0;
+	}
 
 	/* set up the transfers to read touchscreen state; this assumes we
 	 * use formula #2 for pressure, not #3.
@@ -1182,6 +1190,8 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 	if (err)
 		goto err_remove_attr_group;
 
+	device_init_wakeup(&spi->dev, pdata->wakeup);
+
 	return 0;
 
  err_remove_attr_group:
@@ -1206,6 +1216,8 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 static int __devexit ads7846_remove(struct spi_device *spi)
 {
 	struct ads7846		*ts = dev_get_drvdata(&spi->dev);
+
+	device_init_wakeup(&spi->dev, false);
 
 	ads784x_hwmon_unregister(spi, ts);
 	input_unregister_device(ts->input);
@@ -1257,3 +1269,4 @@ module_exit(ads7846_exit);
 
 MODULE_DESCRIPTION("ADS7846 TouchScreen Driver");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("spi:ads7846");

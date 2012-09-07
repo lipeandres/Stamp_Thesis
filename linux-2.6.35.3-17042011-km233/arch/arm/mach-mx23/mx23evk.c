@@ -110,17 +110,22 @@ static int ads7843_pendown_state(void)
 }
 
 static struct ads7846_platform_data ads_info = {
-        .model                  = 7843,
+        .model                  = 7846,
         .x_min                  = 150,
         .x_max                  = 3830,
         .y_min                  = 190,
         .y_max                  = 3830,
-        .vref_delay_usecs       = 100,
-        .x_plate_ohms           = 450,
-        .y_plate_ohms           = 250,
-	.swap_xy 		=1,
+        .vref_delay_usecs       = 0,//100
+		.penirq_recheck_delay_usecs = 1000,//Nuevo
+        .debounce_max           = 20,//10
+        .debounce_tol           = 7,//3
+        .debounce_rep           = 1,//1
+		.x_plate_ohms           = 250,
+        .y_plate_ohms           = 450,
+		.swap_xy 				= 1,
         .get_pendown_state      = ads7843_pendown_state,
-	//.keep_vref_on		=1,
+//		.wakeup 				= 1,
+//	    .keep_vref_on			=1,
 };
 #endif
 
@@ -137,7 +142,7 @@ static struct spi_board_info spi_board_info[] __initdata = {
 //#if defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE) 
 	[0] = {
 		.modalias       = "ads7846",
-		.max_speed_hz   = 100 * 1000,
+		.max_speed_hz   = 120000,
  		.bus_num	= 1,
  		.chip_select    = 0,
 		.irq            = PINID_SSP1_DATA1,
