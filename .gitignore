@@ -24,6 +24,3 @@
 .tmp_*
 *.gcno
 *.map
-output/
-bin/
-boot/
